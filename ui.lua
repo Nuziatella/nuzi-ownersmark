@@ -153,6 +153,19 @@ local function safeSetSliderValue(slider, value)
     end
 end
 
+local function getTextLine(text, index)
+    local wanted = math.max(1, tonumber(index) or 1)
+    local current = 1
+    local source = tostring(text or "")
+    for line in string.gmatch(source, "([^\n\r]+)") do
+        if current == wanted then
+            return line
+        end
+        current = current + 1
+    end
+    return ""
+end
+
 ---Returns a left alignment token if exposed by the runtime.
 ---@return any
 local function getAlignLeft()
@@ -540,7 +553,7 @@ local function createMainWindow()
     if window == nil then
         return nil
     end
-    safeSetExtent(window, 448, 364)
+    safeSetExtent(window, 448, 396)
     createBackground(window)
 
     local dragBar = createLabel(window, "NuziOwnersMarkDrag", 0, 0, 448, 20, 12, { 1, 1, 1, 0 })
@@ -552,13 +565,17 @@ local function createMainWindow()
     Ui.labels.pending = createLabel(window, "NuziOwnersMarkPending", 14, 58, 420, 18, 12, { 0.92, 0.92, 0.92, 1 })
     Ui.labels.active = createLabel(window, "NuziOwnersMarkActive", 14, 80, 420, 18, 12, { 0.78, 0.84, 0.9, 1 })
     Ui.labels.tracked_header = createLabel(window, "NuziOwnersMarkTrackedHeader", 14, 110, 180, 18, 12, { 0.9, 0.94, 1, 1 })
-    Ui.labels.source = createLabel(window, "NuziOwnersMarkSource", 14, 130, 420, 66, 11, { 0.78, 0.84, 0.9, 1 })
-    Ui.labels.help_header = createLabel(window, "NuziOwnersMarkHelpHeader", 14, 204, 180, 18, 12, { 0.9, 0.94, 1, 1 })
-    Ui.labels.help = createLabel(window, "NuziOwnersMarkHelp", 14, 224, 420, 42, 11, { 0.78, 0.84, 0.9, 1 })
-    Ui.labels.warning_header = createLabel(window, "NuziOwnersMarkWarningHeader", 14, 274, 160, 18, 12, { 0.9, 0.94, 1, 1 })
-    Ui.labels.launcher = createLabel(window, "NuziOwnersMarkLauncherLabel", 14, 330, 80, 18, 12, { 1, 1, 1, 1 })
-    Ui.labels.launcher_value = createLabel(window, "NuziOwnersMarkLauncherValue", 398, 330, 36, 18, 12, { 0.95, 0.95, 0.95, 1 })
-    Ui.sliders.launcher_size = createSlider("NuziOwnersMarkLauncherSize", window, 104, 328, 286, 32, 96, 1)
+    Ui.labels.source_line_1 = createLabel(window, "NuziOwnersMarkSourceLine1", 14, 132, 420, 16, 11, { 0.82, 0.88, 0.94, 1 })
+    Ui.labels.source_line_2 = createLabel(window, "NuziOwnersMarkSourceLine2", 14, 150, 420, 16, 11, { 0.78, 0.84, 0.9, 1 })
+    Ui.labels.source_line_3 = createLabel(window, "NuziOwnersMarkSourceLine3", 14, 168, 420, 16, 11, { 0.72, 0.8, 0.88, 1 })
+    Ui.labels.help_header = createLabel(window, "NuziOwnersMarkHelpHeader", 14, 198, 180, 18, 12, { 0.9, 0.94, 1, 1 })
+    Ui.labels.help_line_1 = createLabel(window, "NuziOwnersMarkHelpLine1", 14, 220, 420, 16, 11, { 0.82, 0.88, 0.94, 1 })
+    Ui.labels.help_line_2 = createLabel(window, "NuziOwnersMarkHelpLine2", 14, 238, 420, 16, 11, { 0.82, 0.88, 0.94, 1 })
+    Ui.labels.help_line_3 = createLabel(window, "NuziOwnersMarkHelpLine3", 14, 256, 420, 16, 11, { 0.82, 0.88, 0.94, 1 })
+    Ui.labels.warning_header = createLabel(window, "NuziOwnersMarkWarningHeader", 14, 286, 180, 18, 12, { 0.9, 0.94, 1, 1 })
+    Ui.labels.launcher = createLabel(window, "NuziOwnersMarkLauncherLabel", 14, 360, 80, 18, 12, { 1, 1, 1, 1 })
+    Ui.labels.launcher_value = createLabel(window, "NuziOwnersMarkLauncherValue", 398, 360, 36, 18, 12, { 0.95, 0.95, 0.95, 1 })
+    Ui.sliders.launcher_size = createSlider("NuziOwnersMarkLauncherSize", window, 104, 358, 286, 32, 96, 1)
 
     Ui.buttons.close = createButton("NuziOwnersMarkClose", window, "Hide", 374, 8, 60, 22, function()
         if Ui.actions ~= nil and Ui.actions.toggle_main ~= nil then
@@ -590,9 +607,13 @@ local function createMainWindow()
         Ui.labels.pending,
         Ui.labels.active,
         Ui.labels.tracked_header,
-        Ui.labels.source,
+        Ui.labels.source_line_1,
+        Ui.labels.source_line_2,
+        Ui.labels.source_line_3,
         Ui.labels.help_header,
-        Ui.labels.help,
+        Ui.labels.help_line_1,
+        Ui.labels.help_line_2,
+        Ui.labels.help_line_3,
         Ui.labels.warning_header,
         Ui.labels.launcher,
         Ui.labels.launcher_value,
@@ -737,15 +758,20 @@ function Ui.Render(viewModel, settings)
             )
         )
         safeSetText(
-            Ui.labels.source,
-            string.format(
-                "%s\n%s\n%s",
-                tostring(viewModel.source_text or "Waiting for target"),
-                tostring(viewModel.tracking_text or ""),
-                tostring(viewModel.vehicle_hint_text or "")
-            )
+            Ui.labels.source_line_1,
+            tostring(viewModel.source_text or "Waiting for target")
         )
-        safeSetText(Ui.labels.help, tostring(viewModel.help_text or ""))
+        safeSetText(
+            Ui.labels.source_line_2,
+            tostring(viewModel.tracking_text or "")
+        )
+        safeSetText(
+            Ui.labels.source_line_3,
+            tostring(viewModel.vehicle_hint_text or "")
+        )
+        safeSetText(Ui.labels.help_line_1, getTextLine(viewModel.help_text, 1))
+        safeSetText(Ui.labels.help_line_2, getTextLine(viewModel.help_text, 2))
+        safeSetText(Ui.labels.help_line_3, getTextLine(viewModel.help_text, 3))
     end
 end
 

@@ -752,37 +752,37 @@ local function buildSnapshot(candidate, nowMs)
     if snapshot.pending_present then
         snapshot.current_state = "Owner's Mark Armed"
         snapshot.current_time_text = "--"
-        snapshot.tracking_text = "The mark is armed on the tracked ride. The timer starts after you dismount."
-        snapshot.vehicle_hint_text = "Refresh the scan anytime by retargeting the vehicle."
+        snapshot.tracking_text = "The mark is armed on the tracked ride."
+        snapshot.vehicle_hint_text = "The timer starts after you dismount."
     elseif snapshot.critical_present then
         snapshot.current_state = "Owner's Mark Critical"
         snapshot.current_time_text = snapshot.active_time_text
         snapshot.tracking_text = "The countdown is in the last-chance window."
-        snapshot.vehicle_hint_text = "This is the panic stretch. Refresh soon or lose the mark."
+        snapshot.vehicle_hint_text = "Refresh soon or lose the mark."
     elseif snapshot.expiring_present then
         snapshot.current_state = "Owner's Mark Warning"
         snapshot.current_time_text = snapshot.active_time_text
         snapshot.tracking_text = "The countdown is inside the warning window."
-        snapshot.vehicle_hint_text = "You still have time, but the addon is watching the burn-down."
+        snapshot.vehicle_hint_text = "You still have time, but it is burning down."
     elseif snapshot.active_present then
         snapshot.current_state = "Owner's Mark Countdown"
         snapshot.current_time_text = snapshot.active_time_text
-        snapshot.tracking_text = "The mark is actively counting down on the tracked ride."
-        snapshot.vehicle_hint_text = "Retarget the vehicle anytime to refresh live confirmation."
+        snapshot.tracking_text = "The mark is counting down on the tracked ride."
+        snapshot.vehicle_hint_text = "Retarget the vehicle anytime to refresh confirmation."
     elseif snapshot.missing_present then
         snapshot.current_state = "Owner's Mark Missing"
         snapshot.current_time_text = "Missing"
         snapshot.tracking_text = "No pending or active mark is tracked on the remembered ride."
-        snapshot.vehicle_hint_text = "Either the mark fell off or the addon needs a fresh live scan."
+        snapshot.vehicle_hint_text = "Either it fell off or the addon needs a fresh scan."
     elseif snapshot.vehicle_present then
         snapshot.current_state = "Tracking Vehicle"
         snapshot.current_time_text = "--"
         if Tracker.state.has_seen_mark then
             snapshot.tracking_text = "Tracking is anchored to the remembered vehicle from your earlier scan."
-            snapshot.vehicle_hint_text = "Cached tracking works, but a fresh target scan is always better."
+            snapshot.vehicle_hint_text = "Cached tracking works, but a fresh scan is better."
         else
             snapshot.tracking_text = "Vehicle learned from target. The addon is waiting for Owner's Mark to appear there."
-            snapshot.vehicle_hint_text = "Once the mark shows up, the overlay widgets will react automatically."
+            snapshot.vehicle_hint_text = "Once it shows up, the warning overlays react automatically."
         end
     end
 
