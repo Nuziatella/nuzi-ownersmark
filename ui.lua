@@ -258,6 +258,11 @@ local function createLabel(parent, id, x, y, width, height, fontSize, color)
             label.style:SetFontSize(fontSize)
             label.style:SetAlign(getAlignLeft())
         end)
+        if label.style.SetShadow ~= nil then
+            safeCall(function()
+                label.style:SetShadow(true)
+            end)
+        end
     end
     safeSetColor(label, color)
     safeShow(label, true)
