@@ -300,6 +300,12 @@ end
 ---@param helpers table
 ---@return nil
 function WarningWidgets.ApplyPositions(uiState, settings, helpers)
+    if type(helpers.applyPosition) == "function" then
+        helpers.applyPosition(uiState.warning_text_window, "warning_text")
+        helpers.applyPosition(uiState.warning_icon_window, "warning_icon")
+        return
+    end
+
     if uiState.warning_text_window ~= nil
         and uiState.warning_text_window.RemoveAllAnchors ~= nil
         and uiState.warning_text_window.AddAnchor ~= nil

@@ -1,6 +1,9 @@
 local api = require("api")
+local Core = api._NuziCore or require("nuzi-core/core")
 local Constants = require("nuzi-ownersmark/constants")
 local WarningWidgets = require("nuzi-ownersmark/warning_widgets")
+
+local Positioning = Core.UI.Positioning
 
 local Ui = {
     window = nil,
@@ -8,6 +11,7 @@ local Ui = {
     toggle_icon = nil,
     warning_text_window = nil,
     warning_icon_window = nil,
+    position_manager = nil,
     labels = {},
     buttons = {},
     sliders = {},
@@ -329,11 +333,12 @@ local function createPlainButton(parent, id, x, y, width, height, onClick)
 end
 
 local function createSlider(id, parent, x, y, width, minValue, maxValue, step)
-    if api._Library == nil or api._Library.UI == nil or api._Library.UI.CreateSlider == nil then
+    local library = api._Library or Core.LegacyLibrary
+    if library == nil or library.UI == nil or library.UI.CreateSlider == nil then
         return nil
     end
     local slider = safeCall(function()
-        return api._Library.UI.CreateSlider(id, parent)
+        return library.UI.CreateSlider(id, parent)
     end)
     if slider == nil then
         return nil
@@ -425,97 +430,48 @@ local function applyToggleWindowLayout(settings)
     end
 end
 
+local function createPositionManager()
+    return Positioning.CreateNamedPositionManager({
+        get_settings = function()
+            if Ui.actions ~= nil and type(Ui.actions.get_settings) == "function" then
+                return Ui.actions.get_settings()
+            end
+            return {}
+        end,
+        save_settings = function()
+            if Ui.actions ~= nil and type(Ui.actions.save_settings) == "function" then
+                return Ui.actions.save_settings()
+            end
+            return false
+        end,
+        mappings = {
+            main = { x = "x", y = "y" },
+            button = { x = "button_x", y = "button_y" },
+            warning_text = { x = "warning_text_x", y = "warning_text_y" },
+            warning_icon = { x = "warning_icon_x", y = "warning_icon_y" }
+        },
+        min_x = 0,
+        max_x = 4000,
+        min_y = 0,
+        max_y = 4000,
+        anchor = "TOPLEFT",
+        relative_to = "UIParent",
+        target_anchor = "TOPLEFT",
+        clear_anchors = true,
+        require_shift = true
+    })
+end
+
 ---Attaches drag handlers to a window and one of its child widgets.
 ---@param window table|nil
 ---@param dragTarget table|nil
 ---@param key string
 ---@return nil
 local function attachDrag(window, dragTarget, key)
-    if window == nil or dragTarget == nil or dragTarget.SetHandler == nil then
+    if window == nil or dragTarget == nil or Ui.position_manager == nil then
         return
     end
-
-    local function readWindowOffset()
-        local ok = false
-        local x, y = nil, nil
-        if window.GetEffectiveOffset ~= nil then
-            ok, x, y = pcall(function()
-                return window:GetEffectiveOffset()
-            end)
-        end
-        if (not ok or x == nil or y == nil) and window.GetOffset ~= nil then
-            ok, x, y = pcall(function()
-                return window:GetOffset()
-            end)
-        end
-        if ok then
-            return tonumber(x), tonumber(y)
-        end
-        return nil, nil
-    end
-
-    local function onDragStart()
-        if api.Input ~= nil and api.Input.IsShiftKeyDown ~= nil and not api.Input:IsShiftKeyDown() then
-            return
-        end
-        if window.StartMoving ~= nil then
-            window:StartMoving()
-        end
-        if api.Cursor ~= nil and api.Cursor.ClearCursor ~= nil then
-            api.Cursor:ClearCursor()
-        end
-        if api.Cursor ~= nil and api.Cursor.SetCursorImage ~= nil then
-            api.Cursor:SetCursorImage(CURSOR_PATH.MOVE, 0, 0)
-        end
-    end
-
-    local function onDragStop()
-        if window.StopMovingOrSizing ~= nil then
-            window:StopMovingOrSizing()
-        end
-        if api.Cursor ~= nil and api.Cursor.ClearCursor ~= nil then
-            api.Cursor:ClearCursor()
-        end
-        if Ui.actions ~= nil and Ui.actions.save_position ~= nil then
-            local x, y = readWindowOffset()
-            if x == nil or y == nil then
-                return
-            end
-            if window.RemoveAllAnchors ~= nil and window.AddAnchor ~= nil then
-                safeCall(function()
-                    window:RemoveAllAnchors()
-                    window:AddAnchor("TOPLEFT", "UIParent", tonumber(x) or 0, tonumber(y) or 0)
-                end)
-            end
-            Ui.actions.save_position(key, x, y)
-        end
-    end
-
-    if window.EnableDrag ~= nil then
-        safeCall(function()
-            window:EnableDrag(true)
-        end)
-    end
-    if window.RegisterForDrag ~= nil then
-        safeCall(function()
-            window:RegisterForDrag("LeftButton")
-        end)
-    end
-    if dragTarget.EnableDrag ~= nil then
-        safeCall(function()
-            dragTarget:EnableDrag(true)
-        end)
-    end
-    if dragTarget.RegisterForDrag ~= nil then
-        safeCall(function()
-            dragTarget:RegisterForDrag("LeftButton")
-        end)
-    end
-
-    window:SetHandler("OnDragStart", onDragStart)
-    window:SetHandler("OnDragStop", onDragStop)
-    dragTarget:SetHandler("OnDragStart", onDragStart)
-    dragTarget:SetHandler("OnDragStop", onDragStop)
+    Ui.position_manager:BindDrag(window, { dragTarget }, key)
 end
 
 ---Creates the compact toggle window.
@@ -643,6 +599,7 @@ end
 ---@return nil
 function Ui.Init(actions)
     Ui.actions = actions
+    Ui.position_manager = createPositionManager()
     Ui.toggle_window = createToggleWindow()
     WarningWidgets.InitStandalone(Ui, {
         attachDrag = attachDrag,
@@ -681,6 +638,7 @@ function Ui.Destroy()
     Ui.buttons = {}
     Ui.sliders = {}
     Ui.toggle_icon = nil
+    Ui.position_manager = nil
     Ui.actions = nil
 end
 
@@ -690,19 +648,17 @@ end
 function Ui.ApplyPositions(settings)
     settings = settings or {}
     applyToggleWindowLayout(settings)
-    if Ui.window ~= nil and Ui.window.RemoveAllAnchors ~= nil and Ui.window.AddAnchor ~= nil then
-        safeCall(function()
-            Ui.window:RemoveAllAnchors()
-            Ui.window:AddAnchor("TOPLEFT", "UIParent", tonumber(settings.x) or 340, tonumber(settings.y) or 240)
-        end)
-    end
-    if Ui.toggle_window ~= nil and Ui.toggle_window.RemoveAllAnchors ~= nil and Ui.toggle_window.AddAnchor ~= nil then
-        safeCall(function()
-            Ui.toggle_window:RemoveAllAnchors()
-            Ui.toggle_window:AddAnchor("TOPLEFT", "UIParent", tonumber(settings.button_x) or 40, tonumber(settings.button_y) or 260)
-        end)
+    if Ui.position_manager ~= nil then
+        Positioning.Apply(Ui.window, settings, "main", Ui.position_manager.mappings, Ui.position_manager.options)
+        Positioning.Apply(Ui.toggle_window, settings, "button", Ui.position_manager.mappings, Ui.position_manager.options)
     end
     WarningWidgets.ApplyPositions(Ui, settings, {
+        applyPosition = function(widget, kind)
+            if Ui.position_manager == nil then
+                return false
+            end
+            return Positioning.Apply(widget, settings, kind, Ui.position_manager.mappings, Ui.position_manager.options)
+        end,
         safeCall = safeCall
     })
 end
