@@ -333,13 +333,21 @@ local function createPlainButton(parent, id, x, y, width, height, onClick)
 end
 
 local function createSlider(id, parent, x, y, width, minValue, maxValue, step)
-    local library = api._Library or Core.LegacyLibrary
-    if library == nil or library.UI == nil or library.UI.CreateSlider == nil then
-        return nil
+    local slider = nil
+    if Core ~= nil and Core.UI ~= nil and Core.UI.CreateSlider ~= nil then
+        slider = safeCall(function()
+            return Core.UI.CreateSlider(id, parent)
+        end)
     end
-    local slider = safeCall(function()
-        return library.UI.CreateSlider(id, parent)
-    end)
+    if slider == nil then
+        local library = api._Library or Core.LegacyLibrary
+        if library == nil or library.UI == nil or library.UI.CreateSlider == nil then
+            return nil
+        end
+        slider = safeCall(function()
+            return library.UI.CreateSlider(id, parent)
+        end)
+    end
     if slider == nil then
         return nil
     end
