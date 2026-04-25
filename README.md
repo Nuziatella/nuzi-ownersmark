@@ -69,6 +69,4 @@ You can:
 - Window settings are stored in `.data/settings.txt` so updates do not ship over someone else's layout.
 - Moving windows follows the same `Shift + drag` behavior as the other Nuzi addons.
 
-## Version
-
-Current version: `1.1.1`
+2.0.0
